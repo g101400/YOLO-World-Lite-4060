@@ -41,7 +41,24 @@ android_demo/ncnn-android-yoloworld/
 
 ## 快速开始
 
-### 1. 准备模型（本沙箱网络受限，需在你自己机器上完成）
+### 0. 直接装 APK 跑通链路（零依赖）
+仓库 `app/src/main/assets/` 里已经放了一个 **smoke-test 模型**（`tools/make_smoke_model.py` 生成，约 5MB），
+所以 `release/YOLO-World-Lite-v1.0-release.apk` **装上就能跑**，不需要先准备权重：
+
+- 能看到相机画面、画框、类别名与置信度；
+- 在 App 内填提示词、点「应用提示词」，能验证 文本塔 HTTP → 嵌入 → 打分 → 标签变化 的整条通路。
+
+⚠️ smoke 模型内部只有 3 层卷积，"检测框"是**亮度/梯度驱动的玩具输出**（框会随画面明暗梯度移动、
+类别随提示词变化），只用于验证链路，**不代表检测精度**。真实效果必须换正式权重。
+
+重新生成 smoke 模型（可自检）：
+```bash
+pip install ncnn numpy          # 自检用
+python tools/make_smoke_model.py --verify --preview smoke_preview.png
+```
+自检会打印每个输出的 ncnn 尺寸、按 C++ 解码逻辑得到的框数量，并可选导出标注预览图。
+
+### 1. 准备真实模型（本沙箱网络受限，需在你自己机器上完成）
 ```bash
 # 用 ultralytics 导出 onnx
 pip install ultralytics onnx onnxsim
@@ -90,6 +107,8 @@ python tools/test_decode.py   # 验证 布局自动识别 / 相似度打分 / NM
 | `YW_BLOB_*` | 输入/输出 blob 名，与你的导出一致 |
 
 ## 已知约束
-- 本 Demo 代码、构建、文本塔、转换脚本、算法自测均已就绪；**YOLO-World ncnn 权重（~100MB+）需你按上面步骤自行导出**，因当前环境无法访问 GitHub/HuggingFace 下载。
+- smoke-test 模型只能验证链路，不能给出有意义的检测；真实 YOLO-World ncnn 权重（~100MB+）需按上面步骤自行导出。
 - 文本塔默认用确定性 mock 嵌入以打通链路；真实检测请用 `--clip`，并尽量使用与 YOLO-World 训练一致的 CLIP 文本塔以保证对齐。
 - 端侧 overlay 用的是内置 5x7 点阵字体，只覆盖 ASCII；**中文提示词在画面上会显示为方块**（App 界面中文由 Android 渲染，不受影响）。建议提示词用英文，如 `person, car, dog`。
+- 解码器对分类得分统一做了 `sigmoid`（`YW_CONF_SCALE` 可调）。如果你的导出已经在模型里做过 sigmoid，
+  请把 `yoloworld.h` 里的 `YW_CONF_SCALE` 调小或加开关，否则阈值语义会不一致。

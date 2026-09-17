@@ -8,8 +8,26 @@
 /captures
 .externalNativeBuild
 build.log
+push.log
+verify.log
+pip*.log
+smoke_gen.log
+sweep.log
+api_probe.log
+dbg*.log
+_case.py
+_m.param
+_m.bin
+_t.param
+_t.bin
+_ref/
+tools/_sweep_tmp/
 keystore.properties
 release-key.jks
-# user-supplied model weights (large, not committed)
+# 真实 YOLO-World 权重（很大，需自行导出，勿提交）
+# 注意：smoke-test 模型也用这两个文件名，但只有 ~5MB，会被提交
+# 若要换成真实权重，直接覆盖本目录同名文件即可（真实权重 >25MB 不会被推送脚本上传）
 app/src/main/assets/*.param
 app/src/main/assets/*.bin
+!app/src/main/assets/yoloworld.param
+!app/src/main/assets/yoloworld.bin

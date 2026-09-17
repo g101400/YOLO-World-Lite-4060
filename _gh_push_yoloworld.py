@@ -26,7 +26,13 @@ BRANCH = "main"
 IGNORE = [
     "*.iml", ".gradle", "/local.properties", "/.idea", ".DS_Store",
     "/build", "/app/build", "/captures", ".externalNativeBuild", "build.log",
-    "verify.log", "push.log", ".cxx", "*.apk",
+    "verify.log", "push.log", "pip_numpy.log", "pip_ncnn.log", "pip_ncnn2.log",
+    "pip_ncnn_chk.log", "pipchk.log", "smoke_gen.log", "sweep.log", "api_probe.log",
+    "dbg.log", "dbg2.log", "dbg3.log", "dbg4.log", "dbg5.log",
+    "_case.py", "_m.param", "_m.bin", "_t.param", "_t.bin", "_ref", "_sweep_tmp",
+    "*.apk",
+    # 注意：assets 里的 smoke-test 模型 (yoloworld.param/bin, ~5MB) 是要提交的；
+    # 真实 YOLO-World 权重 (>25MB) 由下方体积上限自动跳过
     "keystore.properties", "release-key.jks",
     "app/src/main/assets/*.param", "app/src/main/assets/*.bin",
 ]
@@ -85,7 +91,7 @@ def main():
     # 2) 收集文件
     files = []
     for dp, dn, fns in os.walk(ROOT):
-        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx")]
+        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx", "_ref", "_sweep_tmp")]
         for fn in fns:
             full = os.path.join(dp, fn)
             rel = os.path.relpath(full, ROOT)
