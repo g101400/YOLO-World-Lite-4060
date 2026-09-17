@@ -34,7 +34,6 @@ IGNORE = [
     # 注意：assets 里的 smoke-test 模型 (yoloworld.param/bin, ~5MB) 是要提交的；
     # 真实 YOLO-World 权重 (>25MB) 由下方体积上限自动跳过
     "keystore.properties", "release-key.jks",
-    "app/src/main/assets/*.param", "app/src/main/assets/*.bin",
 ]
 
 

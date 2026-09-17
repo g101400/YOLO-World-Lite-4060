@@ -1,0 +1,9 @@
+7767517
+7 8
+Input            images       0 1 images
+Convolution      stem         1 1 images stem  0=16 1=160 3=160 5=1 6=1228800
+Split            stem_split   1 2 stem stem_a stem_b
+Convolution      box_head     1 1 stem_a box_pre 0=4 1=1 5=1 6=64
+Reshape          box_reshape  1 1 box_pre output0 0=16 1=4 2=1
+Convolution      cls_head     1 1 stem_b cls_pre 0=512 1=1 5=1 6=8192
+Reshape          cls_reshape  1 1 cls_pre output1 0=16 1=512 2=1
