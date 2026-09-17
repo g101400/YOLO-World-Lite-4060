@@ -1,0 +1,7 @@
+{
+  "versionCode": 4,
+  "versionName": "1.2.1",
+  "apk": "https://github.com/g101400/YOLO-World-Lite-4060/releases/download/v1.2.1/YOLO-World-Lite-v1.2.1-release.apk",
+  "baidu": "见仓库 README 网盘链接",
+  "notes": "新增主菜单（系列对比/工业应用/大模型改进/软件升级/模型扩展/帮助/关于）；应用内在线检查更新"
+}

@@ -44,4 +44,160 @@
 <string name="ov_no_prompt">未设置提示词：请输入类别，然后点击【应用提示词】</string>
 <string name="ov_dim_mismatch">嵌入维度不匹配（模型需要 %1$d 维），正在自动重算…</string>
     <string name="prompt_too_many">最多支持 10 个类别（模型文本输入固定 10 行）</string>
+
+<!-- ==================== 主菜单 ==================== -->
+<string name="btn_menu">菜单</string>
+<string name="menu_title">YOLO-World Lite 菜单</string>
+<string-array name="main_menu">
+    <item>与之前系列对比</item>
+    <item>工业场景应用</item>
+    <item>结合大模型改进</item>
+    <item>软件升级</item>
+    <item>扩大分类模型（研究/下载）</item>
+    <item>帮助</item>
+    <item>关于</item>
+</string-array>
+
+<!-- 1) 与之前系列对比 -->
+<string name="doc_compare">【YOLO-World Lite 与之前系列对比】
+
+■ 与传统 YOLOv5 / YOLOv8 对比
+· 传统 YOLO：类别固定（COCO 80 类），换类别必须重新标注、重新训练、重新导出，周期通常以天计。
+· YOLO-World Lite：开放词汇（Open-Vocabulary）检测——类别由文本提示词即时指定，端侧把文字编码成向量喂给模型即可识别新目标，无需重训练，秒级切换。
+· 精度：封闭类别上略低于专用训练的 YOLOv8，但泛化能力与零样本能力远超固定类别模型。
+
+■ 与 YOLO-World 官方版对比
+· 官方版依赖 CLIP 文本编码器（数亿参数），端侧完整部署困难。
+· Lite 版内置轻量端侧词表编码 + 可选远端文本编码服务，CPU 即可实时运行（本版为 CPU-only ncnn，模型 ~25.6MB）。
+
+■ 本系列版本演进
+· v1.0：烟雾测试模型验证全链路（ncnn 部署、提示词、摄像头）。
+· v1.1：端侧文本编码自愈（维度不匹配自动重算）、远端编码服务回退。
+· v1.2.0：打入正式权重 yolov8s-worldv2（25.6MB），修复 NDK libc++ ABI 兼容，40.4MB 单包即装即用。
+· v1.2.1（当前）：新增主菜单（系列对比/工业应用/大模型改进/在线升级/模型扩展/帮助/关于），支持应用内检查更新。</string>
+
+<!-- 2) 工业场景应用 -->
+<string name="doc_industry">【工业场景应用】
+
+YOLO-World 的开放词汇特性特别适合工业现场"类别多变、来不及训练"的场景：
+
+■ 安全合规巡检
+· 提示词示例：安全帽, 反光衣, 未戴安全帽的人头, 灭火器, 安全出口标识
+· 工地/厂区摄像头实时检测，换一个车间只需改提示词。
+
+■ 设备与仪表
+· 提示词示例：压力表, 温度计, 阀门, 泄漏点, 红色指示灯, 绿色指示灯
+· 巡检机器人边走边认，无需为每种仪表单独训练。
+
+■ 仓储物流
+· 提示词示例：叉车, 托盘, 纸箱, 消防通道占用, 人员
+· 人车混行区域预警、库位占用统计。
+
+■ 质检与缺陷初筛
+· 提示词示例：划痕, 凹陷, 锈蚀, 油污, 缺件
+· 先用开放词汇做零样本初筛，积累样本后再训练专用缺陷模型精筛——这是"开放词汇发现 + 专用模型精化"的两级方案。
+
+■ 落地建议
+· 类别控制在 10 个以内（本 App 文本输入固定 10 行）。
+· 现场光照复杂时优先用后置摄像头 + 固定支架。
+· 结合远端文本编码服务可获得更高类别匹配精度（局域网部署即可）。</string>
+
+<!-- 3) 结合大模型改进 -->
+<string name="doc_llm">【结合大模型改进】
+
+■ 1. LLM 自动生成提示词词表
+· 把检测任务描述交给大模型（如 GPT/Qwen/DeepSeek）："我要在化工厂巡检，列出 10 个最值得检测的目标"，模型输出直接填入提示词框。
+· 进阶：LLM 生成同义词/上位词扩展（卡车→货车, 工程车, 自卸车），提高召回。
+
+■ 2. 多模态大模型自动标注闭环
+· YOLO-World 零样本粗检 → 多模态大模型（Qwen-VL、GPT-4V 等）复核确认 → 确认样本入库 → 定期训练专用小模型替换线上检测头。
+· 这是当前工业界主流的"冷启动→数据飞轮"方案。
+
+■ 3. 更强的开放词汇骨干（研究路线）
+· Grounding DINO / GLIP：文本-图像融合更深，精度更高但算力开销大，适合服务端。
+· YOLO-World v2：RepVL-PAN 视觉-语言特征融合，本 App 已内置。
+· 端侧小型化方向：文本编码器蒸馏成轻量词表（本 App 的端侧编码即此思路），或 CLIP 文本塔量化到 int8。
+
+■ 4. 大模型 + 分割
+· YOLO-World 检出目标 → SAM/SAM2 分割出像素级掩码 → 得到实例分割结果，无需重新训练分割模型。
+· 这也是本 App "扩大分类模型"计划的目标形态（详见该子菜单）。
+
+■ 5. 智能提示词助手（路线图）
+· 计划在 App 内集成"描述场景→自动生成提示词"入口，由远端 LLM 服务承担，端侧只做推理。</string>
+
+<!-- 4) 软件升级 -->
+<string name="update_menu_title">软件升级</string>
+<string name="doc_update_intro">检查 GitHub 上的最新版本，如有新版可直接跳转下载。\n\n当前渠道：GitHub Release（备用：百度网盘）。\n\n服务器返回：</string>
+<string name="update_checking">正在检查更新…</string>
+<string name="update_already_latest">已是最新版本 %1$s，无需升级。</string>
+<string name="update_new_version">发现新版本 %1$s（当前 %2$s）：%3$s</string>
+<string name="update_check_fail">检查更新失败（无网络或服务不可达）。\n\n可手动访问：\n%1$s</string>
+<string name="update_btn_download">下载新版本</string>
+<string name="update_btn_open_page">打开发布页</string>
+<string name="update_btn_close">关闭</string>
+<string name="update_channel">更新渠道说明</string>
+<string name="doc_update_channel">【更新渠道】\n\n· GitHub Release（主渠道）：\n%1$s/releases\n\n· 百度网盘（备用）：\n见项目 README 中的网盘链接，文件名格式 YOLO-World-Lite-vX.Y.Z-release.apk\n\n升级方式：下载 APK 后直接安装覆盖，数据与设置自动保留（versionCode 递增才可覆盖安装）。</string>
+
+<!-- 5) 扩大分类模型 -->
+<string name="doc_expand">【扩大分类模型：研究 / 下载】
+
+■ 当前能力
+· 内置 yolov8s-worldv2 检测模型（ncnn，25.6MB），支持任意文本类别（≤10 类/次），仅检测框，无分割。
+
+■ 扩大识别范围的途径
+1) 更多类别：无需换模型——直接改提示词即可，开放词汇模型天然支持任意目标；类别数量受文本编码器输入行数限制，可在导出时把 10 行文本输入扩到 80 行（对应 COCO 全类别），端侧性能几乎不变。
+2) 中文类别：当前端侧词表以英文为主，建议中文场景勾选"使用远端文本编码服务"或改用英文提示词（如 person, forklift）。
+3) 实例分割（路线图）：导出 YOLOv8-seg-world 结构或接 SAM 掩码解码器，得到像素级分割；相关导出脚本将随研究进度发布到仓库 tools/ 目录。
+
+■ 模型下载
+· GitHub 仓库（含导出脚本与文档）：
+%1$s
+· 官方权重（Ultralytics）：
+https://github.com/ailab-ustc/YOLO-World 或 pip install ultralytics 后用 yolov8s-worldv2.pt
+· ncnn 转换：pnnx / onnx→ncnn 两条路线，脚本见仓库 docs/export.md（随版本更新）。
+
+■ 研究计划（随软件更新同步）
+· v1.3：文本输入扩容（80 类）+ 分割掩码预览
+· v1.4：离线中文词表 + 自动场景提示词
+· v2.0：YOLO-World + SAM 端侧实例分割</string>
+
+<!-- 6) 帮助 -->
+<string name="doc_help">【使用帮助】
+
+■ 快速上手
+1. 启动后模型自动加载（状态栏显示"模型已就绪"）。
+2. 在提示词框输入要检测的类别，逗号分隔（如：人, 汽车, 狗），点【应用提示词】。
+3. 对准目标，画面即出现彩色检测框与置信度。
+4. 【切换摄像头】可前后切换。
+
+■ 提示词技巧
+· 最多 10 个类别；中英文均可（中文建议配合远端编码服务）。
+· 用具体名词效果好：\'黄色安全帽\' 优于 \'帽子\'；\'叉车\' 优于 \'车辆\'。
+· 检测不到时尝试：换英文、换更常见的说法、减少类别数。
+
+■ 远端文本编码服务（可选）
+· 勾选【使用远端文本编码服务】，填局域网服务地址（默认 http://192.168.1.10:8000）。
+· 服务端 POST /embed，入参 {"prompts":["人","车"]}，出参 {"embeddings":[[...],[...]]}。
+· 服务不可用时自动回退端侧编码，不影响使用。
+
+■ 常见问题
+· 提示"模型加载失败"：assets 缺少 yoloworld.param/bin，需重新编译。
+· GPU 模式不可用：本版为 CPU-only 构建，请保持 CPU 模式。
+· 画面卡顿：减少类别数或降低分辨率。</string>
+
+<!-- 7) 关于 -->
+<string name="doc_about">【关于】
+
+YOLO-World Lite
+开放词汇实时目标检测 · 端侧 ncnn 版
+
+· 版本：%1$s (versionCode %2$d)
+· 模型：yolov8s-worldv2 (ncnn, CPU-only)
+· 能力：文本提示词即时定义检测类别，端侧离线文本编码 + 可选远端编码服务
+· 开源地址：%1$s
+
+· 基于开源项目：YOLO-World (Tencent AILab)、ncnn (Tencent)、ncnn-android-yoloworld 社区示例
+· 本应用仅供研究学习使用
+
+反馈与问题请访问仓库 Issues 页面。</string>
 </resources>

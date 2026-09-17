@@ -20,6 +20,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:drawSelectorOnTop="true" />
+
+        <Button
+            android:id="@+id/buttonMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_menu" />
     </LinearLayout>
 
     <LinearLayout

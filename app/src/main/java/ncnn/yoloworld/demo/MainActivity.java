@@ -2,9 +2,17 @@ package ncnn.yoloworld.demo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.util.Linkify;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -35,6 +43,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,
 
     private static final String TAG = "MainActivity";
     public static final int REQUEST_CAMERA = 100;
+
+    // ---- 在线升级（GitHub Release 为主渠道，百度网盘为备用） ----
+    private static final String REPO_PAGE =
+            "https://github.com/g101400/YOLO-World-Lite-4060";
+    private static final String VERSION_URL =
+            "https://raw.githubusercontent.com/g101400/YOLO-World-Lite-4060/main/update/version.json";
 
     private final NcnnYoloworld ncnnyoloworld = new NcnnYoloworld();
 
@@ -109,6 +123,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,
             @Override
             public void onClick(View arg0) {
                 applyPrompt(TextEmbedder.DEFAULT_DIM, checkUseServer.isChecked());
+            }
+        });
+
+        Button buttonMenu = (Button) findViewById(R.id.buttonMenu);
+        buttonMenu.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                showMainMenu();
             }
         });
 
@@ -293,6 +315,194 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,
             return flat;
         } catch (Exception e) {
             Log.e(TAG, "fetchEmbeddings " + e.getMessage());
+            return null;
+        }
+    }
+
+    // ------------------------------------------------------------ 主菜单 ----
+
+    private void showMainMenu() {
+        final String[] items = getResources().getStringArray(R.array.main_menu);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.menu_title)
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        switch (which) {
+                            case 0: showDoc(R.string.doc_compare); break;
+                            case 1: showDoc(R.string.doc_industry); break;
+                            case 2: showDoc(R.string.doc_llm); break;
+                            case 3: showUpdateMenu(); break;
+                            case 4:
+                                showDoc(getString(R.string.doc_expand, REPO_PAGE));
+                                break;
+                            case 5: showDoc(R.string.doc_help); break;
+                            case 6:
+                                showDoc(getString(R.string.doc_about,
+                                        REPO_PAGE, getAppVersionName(), getAppVersionCode()));
+                                break;
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.update_btn_close, null)
+                .show();
+    }
+
+    /** 显示文档对话框（可滚动，URL 自动可点）。 */
+    private void showDoc(int textResId) {
+        showDoc(getString(textResId));
+    }
+
+    private void showDoc(String text) {
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        TextView tv = new TextView(this);
+        tv.setPadding(48, 32, 48, 48);
+        tv.setTextSize(14);
+        tv.setText(text);
+        tv.setAutoLinkMask(Linkify.WEB_URLS);
+        tv.setMovementMethod(LinkMovementMethod.getInstance());
+        tv.setTextIsSelectable(true);
+        scroll.addView(tv);
+
+        new AlertDialog.Builder(this)
+                .setView(scroll)
+                .setPositiveButton(R.string.update_btn_close, null)
+                .show();
+    }
+
+    // ---------------------------------------------------------- 软件升级 ----
+
+    private void showUpdateMenu() {
+        final String[] items = {
+                "检查更新",
+                getString(R.string.update_channel)
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.update_menu_title)
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (which == 0) checkUpdate();
+                        else showDoc(getString(R.string.doc_update_channel, REPO_PAGE));
+                    }
+                })
+                .setNegativeButton(R.string.update_btn_close, null)
+                .show();
+    }
+
+    private void checkUpdate() {
+        textStatus.setText(R.string.update_checking);
+        final String localVersion = getAppVersionName();
+        final int localCode = getAppVersionCode();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String remoteName = null;
+                int remoteCode = 0;
+                String notes = "";
+                String apkUrl = "";
+                String raw = httpGet(VERSION_URL, 6000);
+                if (raw != null) {
+                    try {
+                        JSONObject j = new JSONObject(raw);
+                        remoteName = j.optString("versionName", null);
+                        remoteCode = j.optInt("versionCode", 0);
+                        notes = j.optString("notes", "");
+                        apkUrl = j.optString("apk", REPO_PAGE + "/releases");
+                    } catch (Exception e) {
+                        Log.e(TAG, "checkUpdate parse " + e.getMessage());
+                    }
+                }
+                final boolean hasNew = remoteName != null && remoteCode > localCode;
+                final String fRemote = remoteName;
+                final String fNotes = notes;
+                final String fApkUrl = apkUrl;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (fRemote == null) {
+                            showDoc(getString(R.string.update_check_fail, REPO_PAGE + "/releases"));
+                            return;
+                        }
+                        if (hasNew) {
+                            showUpdateDialog(fRemote, localVersion, fNotes, fApkUrl);
+                        } else {
+                            showDoc(getString(R.string.update_already_latest, localVersion));
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void showUpdateDialog(final String remote, String local,
+                                  String notes, final String apkUrl) {
+        String msg = getString(R.string.update_new_version, remote, local,
+                TextUtils.isEmpty(notes) ? "" : "\n更新内容：\n" + notes);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.btn_menu) + " · " + getString(R.string.update_checking).replace("…", ""))
+                .setMessage(msg)
+                .setPositiveButton(R.string.update_btn_download, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        openBrowser(apkUrl);
+                    }
+                })
+                .setNeutralButton(R.string.update_btn_open_page, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        openBrowser(REPO_PAGE + "/releases");
+                    }
+                })
+                .setNegativeButton(R.string.update_btn_close, null)
+                .show();
+    }
+
+    private void openBrowser(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Toast.makeText(this, "无法打开浏览器：" + url, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String getAppVersionName() {
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pi.versionName;
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    private int getAppVersionCode() {
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pi.versionCode;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** 简单 GET，返回响应体文本或 null。 */
+    private static String httpGet(String urlStr, int timeoutMs) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            int code = conn.getResponseCode();
+            InputStream is = (code == 200) ? conn.getInputStream() : conn.getErrorStream();
+            StringBuilder sb = new StringBuilder();
+            if (is != null) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+                br.close();
+            }
+            conn.disconnect();
+            return (code == 200) ? sb.toString() : null;
+        } catch (Exception e) {
             return null;
         }
     }

@@ -13,8 +13,8 @@ android {
         applicationId "com.ncnn.yoloworld.demo"
         archivesBaseName = "$applicationId"
 
-        versionCode 3
-        versionName "1.2.0"
+        versionCode 4
+        versionName "1.2.1"
         minSdkVersion 24
         targetSdkVersion 29
 

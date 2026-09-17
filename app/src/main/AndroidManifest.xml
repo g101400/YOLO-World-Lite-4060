@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="ncnn.yoloworld.demo"
-      android:versionCode="2"
-      android:versionName="1.1.0">
+      android:versionCode="4"
+      android:versionName="1.2.1">
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- 仅在勾选「使用远端文本编码服务」时需要 -->
     <uses-permission android:name="android.permission.INTERNET" />

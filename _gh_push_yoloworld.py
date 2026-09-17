@@ -90,7 +90,7 @@ def main():
     # 2) 收集文件
     files = []
     for dp, dn, fns in os.walk(ROOT):
-        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx", "_ref", "_sweep_tmp", "_real")]
+        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx", "_ref", "_sweep_tmp", "_real", "release")]
         for fn in fns:
             full = os.path.join(dp, fn)
             rel = os.path.relpath(full, ROOT)
