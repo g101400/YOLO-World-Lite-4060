@@ -26,7 +26,7 @@ BRANCH = "main"
 IGNORE = [
     "*.iml", ".gradle", "/local.properties", "/.idea", ".DS_Store",
     "/build", "/app/build", "/captures", ".externalNativeBuild", "build.log",
-    "verify.log", ".cxx", "*.apk",
+    "verify.log", "push.log", ".cxx", "*.apk",
     "keystore.properties", "release-key.jks",
     "app/src/main/assets/*.param", "app/src/main/assets/*.bin",
 ]
