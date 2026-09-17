@@ -1,19 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<string name="app_name">yoloworld.lite</string>
+<string name="app_name">YOLO-World 开放词汇</string>
 <string-array name="cpugpu_array">
-    <item>CPU</item>
-    <item>GPU</item>
+    <item>CPU 模式</item>
+    <item>GPU 模式</item>
 </string-array>
 
-<string name="prompt_empty">请输入类别名称</string>
-<string name="status_model_fail">模型加载失败：请将 yoloworld.param/.bin 放入 assets</string>
-<string name="status_wait_prompt">模型已加载，等待提示词…</string>
-<string name="status_fetching">正在向文本编码器请求嵌入…</string>
-<string name="status_embed_fail">嵌入获取失败，请确认文本编码器服务已启动</string>
+<!-- 界面文字 -->
+<string name="btn_switch_camera">切换摄像头</string>
+<string name="btn_apply_prompt">应用提示词</string>
+<string name="hint_prompt">类别（中英文逗号分隔，如：人, 汽车, 自行车, 狗）</string>
+<string name="default_prompt">人, 汽车, 自行车, 狗</string>
+<string name="check_use_server">使用远端文本编码服务</string>
+<string name="hint_server">远端地址（如 192.168.1.10:8000）</string>
+<string name="default_server">http://192.168.1.10:8000</string>
+<string name="status_init">初始化中…</string>
+
+<!-- 状态提示 -->
+<string name="status_model_fail">模型加载失败：请把 yoloworld.param / yoloworld.bin 放入 assets 后重新编译</string>
+<string name="status_gpu_unavailable">该设备不支持 Vulkan，已无法使用 GPU 模式，请切换回 CPU 模式</string>
+<string name="status_ready_local">模型已就绪（端侧离线嵌入）</string>
+<string name="status_ready_table">模型已就绪（端侧词表 %1$d 条）</string>
+<string name="status_encoding">正在本机编码 %1$d 个类别（%2$d 维）…</string>
+<string name="status_fetching">正在请求远端文本编码服务…</string>
+<string name="status_applied">提示词已应用：%1$d 类（%2$s）</string>
+<string name="status_server_fallback">；远端服务不可用，已自动改用端侧编码</string>
 <string name="status_set_fail">提示词设置失败</string>
-<string name="status_applied">提示词已应用：%d 类</string>
-<string name="status_error">错误：</string>
-<string name="toast_req_fail">文本编码器请求失败</string>
-<string name="toast_applied">提示词已应用：%d 类</string>
+<string name="status_dim_retry">模型嵌入维度为 %1$d，正在按该维度重新编码…</string>
+<string name="status_dim_server">模型嵌入维度为 %1$d，与远端服务返回的维度不一致，请改用端侧编码或调整服务</string>
+<string name="status_dim_giveup">嵌入维度始终不匹配（模型要求 %1$d 维），请检查模型导出</string>
+<string name="status_no_camera_perm">未授予相机权限，无法预览</string>
+
+<string name="source_local">端侧离线编码</string>
+<string name="source_table">端侧词表</string>
+<string name="source_server">远端服务</string>
+
+<string name="prompt_empty">请输入类别名称</string>
+
+<!-- 预览画面上的中文提示 -->
+<string name="ov_label">%1$s %2$.1f%%</string>
+<string name="ov_time">推理 %1$.1f 毫秒</string>
+<string name="ov_no_model">未加载模型：请将 yoloworld.param / yoloworld.bin 放入 assets 目录后重新编译</string>
+<string name="ov_no_prompt">未设置提示词：请输入类别，然后点击【应用提示词】</string>
+<string name="ov_dim_mismatch">嵌入维度不匹配（模型需要 %1$d 维），正在自动重算…</string>
 </resources>

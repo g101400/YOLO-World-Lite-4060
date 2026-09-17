@@ -13,19 +13,24 @@
 ```
 android_demo/ncnn-android-yoloworld/
 ├── app/src/main/
-│   ├── java/ncnn/yoloworld/demo/   # MainActivity(提示词UI) + NcnnYoloworld(JNI桥)
+│   ├── java/ncnn/yoloworld/demo/
+│   │   ├── MainActivity.java        # 提示词 UI + 相机/权限
+│   │   ├── NcnnYoloworld.java       # JNI 桥
+│   │   ├── YoloOverlayView.java     # 预览层: 画框 + 中文标签 + 中文状态提示
+│   │   └── TextEmbedder.java        # 端侧文本编码(词表 / 内置离线编码器)
 │   ├── jni/
 │   │   ├── yoloworld.h / .cpp       # 解码器: 锚点无关 + 文本嵌入相似度
-│   │   ├── yoloworldncnn.cpp        # JNI + 渲染循环
-│   │   ├── ywmimage.h               # 零依赖图像容器 + 画框/5x7点阵字 (替代 OpenCV)
+│   │   ├── yoloworldncnn.cpp        # JNI + 渲染循环(只算不画，结果回调给 Java)
+│   │   ├── ywmimage.h               # 零依赖图像容器 (替代 OpenCV)
 │   │   ├── ndkcamera.h / .cpp       # Camera2 NDK 采集与渲染
 │   │   └── CMakeLists.txt           # 仅链接 ncnn (E:/AndroidSDK)，不依赖 OpenCV
-│   ├── assets/                      # 放入 yoloworld.param / yoloworld.bin
-│   └── res/                         # 布局/字符串(提示词输入框、文本塔地址)
-├── yoloworld_text_tower.py          # CLIP 文本塔服务 (真实/ mock)
+│   ├── assets/                      # yoloworld.param / .bin，可选 prompt_emb.bin
+│   └── res/                         # 布局/字符串(全中文)
+├── yoloworld_text_tower.py          # CLIP 文本塔服务 (可选，真实/ mock)
 ├── convert_yoloworld_ncnn.py        # 官方权重 → 本Demo约定ncnn
 ├── tools/test_decode.py             # 解码算法离线自测
 ├── tools/make_smoke_model.py        # 生成/自检 smoke-test ncnn 模型(可脱机跑通链路)
+├── tools/build_prompt_table.py      # 生成端侧嵌入词表 assets/prompt_emb.bin
 ├── docs/ncnn_model_format.md        # ncnn param/bin 格式速查(手写模型/排错)
 ├── docs/yoloworld_route_a.html      # 路线A 知识文档
 └── README.md
@@ -39,7 +44,15 @@ android_demo/ncnn-android-yoloworld/
 得分 = sigmoid( (视觉嵌入 · 文本嵌入) / τ ),  τ≈0.07
 ```
 
-检测骨干与框回归 100% 在端侧；文本塔只在提示词变化时算一次，可用本机 Python 服务或云端提供。
+检测骨干与框回归 100% 在端侧。**文本嵌入也在端侧完成**，三级来源（见 `TextEmbedder.java`）：
+
+| 优先级 | 来源 | 说明 |
+|---|---|---|
+| 1 | `assets/prompt_emb.bin` | 预计算的 CLIP 词表，任意维度、无需联网。用 `tools/build_prompt_table.py` 生成 |
+| 2 | 内置离线编码器 | 字符/二元组哈希投影，任意提示词可用、零依赖；**不是 CLIP 对齐**，仅配合验证模型有意义 |
+| 3 | 远端文本塔服务 | 勾选「使用远端文本编码服务」后启用，适合跑真实 CLIP 文本塔；失败会自动退回端侧 |
+
+框与标签由 Android 侧 `YoloOverlayView` 用系统字体绘制，所以**中文提示词、中文状态提示都能正常显示**。
 
 ## 快速开始
 
@@ -48,7 +61,8 @@ android_demo/ncnn-android-yoloworld/
 所以 `release/YOLO-World-Lite-v1.0-release.apk` **装上就能跑**，不需要先准备权重：
 
 - 能看到相机画面、画框、类别名与置信度；
-- 在 App 内填提示词、点「应用提示词」，能验证 文本塔 HTTP → 嵌入 → 打分 → 标签变化 的整条通路。
+- 在 App 内填提示词（中英文都行）、点「应用提示词」，即可看到标签随提示词变化；
+- 默认走端侧编码，**不需要开任何服务、不需要联网**。
 
 ⚠️ smoke 模型内部只有 3 层卷积，"检测框"是**亮度/梯度驱动的玩具输出**（框会随画面明暗梯度移动、
 类别随提示词变化），只用于验证链路，**不代表检测精度**。真实效果必须换正式权重。
@@ -71,11 +85,23 @@ cp yoloworld.param yoloworld.bin app/src/main/assets/
 ```
 ncnn 约定：输入 `images`[1,3,640,640]；输出 `output0`=boxes、`output1`=cls（解码器自动识别布局）。
 
-### 2. 启动文本塔服务（PC 端）
+### 2.（可选）端侧真实语义：固化成词表，或起远端服务
+
+**方式一：把嵌入打进 APK（推荐，手机上完全离线）**
 ```bash
-python yoloworld_text_tower.py --mock   # 演示(无依赖)
+# 用真实 CLIP 文本塔算好固定词表的嵌入
+python yoloworld_text_tower.py --clip                     # 另开终端
+python tools/build_prompt_table.py --prompts "人,汽车,自行车,狗" --server http://127.0.0.1:8000
+# 产物 app/src/main/assets/prompt_emb.bin，重新编译 APK 即生效
+```
+不填 `--server` 而用 `--mock` 也能生成（确定性占位向量，只用于验证链路）。
+
+**方式二：远端服务（词表可变时用）**
+```bash
+python yoloworld_text_tower.py --mock    # 演示(无依赖)
 python yoloworld_text_tower.py --clip    # 真实 CLIP 文本塔
 ```
+在 App 里填 `http://<PC局域网IP>:8000` 并勾选「使用远端文本编码服务」。
 
 ### 3. 构建并签名 APK（需 E:/AndroidSDK 工具链）
 ```bash
@@ -91,9 +117,12 @@ cd android_demo/ncnn-android-yoloworld
 > 图像缓冲与画框/文字改为 `ywmimage.h` 里的零依赖实现（同时 APK 也小了几 MB）。
 
 ### 4. 手机运行
-- 把 APK 安装到手机；
-- 在 App 内「文本编码器地址」填 `http://<PC局域网IP>:8000`（模拟器填 `http://10.0.2.2:8000`）；
-- 在「类别」框输入英文逗号分隔的提示词（如 `person, car, dog`），点「应用提示词」。
+- 安装 APK 后首次启动会申请相机权限，**必须允许**（否则只有黑屏 + 中文提示）；
+- 在「类别」框输入提示词（中英文逗号、顿号、分号、换行都可分隔；如 `人, 汽车, 自行车, 狗`），点「应用提示词」；
+- 不需要联网、不需要 PC 服务；只有当你要用真实 CLIP 文本塔时才勾选远端服务。
+
+> 版本要求：`minSdk 24 / targetSdk 29`。旧版曾用 `targetSdk 24`，Android 12+ 会提示
+> 「此应用专为旧版 Android 打造，可能无法正常运行」，已提升到 29 消除该提示。
 
 ## 验证解码算法（无需模型）
 ```bash
@@ -110,7 +139,18 @@ python tools/test_decode.py   # 验证 布局自动识别 / 相似度打分 / NM
 
 ## 已知约束
 - smoke-test 模型只能验证链路，不能给出有意义的检测；真实 YOLO-World ncnn 权重（~100MB+）需按上面步骤自行导出。
-- 文本塔默认用确定性 mock 嵌入以打通链路；真实检测请用 `--clip`，并尽量使用与 YOLO-World 训练一致的 CLIP 文本塔以保证对齐。
-- 端侧 overlay 用的是内置 5x7 点阵字体，只覆盖 ASCII；**中文提示词在画面上会显示为方块**（App 界面中文由 Android 渲染，不受影响）。建议提示词用英文，如 `person, car, dog`。
+- **内置离线编码器不是 CLIP 对齐的**：它保证「不报错、可跑通、任意提示词可用」，但不产生真实语义。
+  要真实语义请用 `prompt_emb.bin` 词表（方式一）或远端 CLIP 服务（方式三）。
+  真实权重 + 哈希嵌入的组合会得到无意义的结果，务必用词表/服务。
+- 远端服务是局域网明文 HTTP，`AndroidManifest.xml` 里已开 `usesCleartextTraffic="true"`（仅此用途）。
 - 解码器对分类得分统一做了 `sigmoid`（`YW_CONF_SCALE` 可调）。如果你的导出已经在模型里做过 sigmoid，
   请把 `yoloworld.h` 里的 `YW_CONF_SCALE` 调小或加开关，否则阈值语义会不一致。
+- 提示词嵌入维度必须等于模型输出维度：不一致时画面会提示「嵌入维度不匹配」，App 会自动按模型维度重算一次
+  （仅端侧编码可用；词表/远端服务会提示手改）。
+
+## v1.1.0 变更
+1. `targetSdk 24 → 29`，消除「专为旧版 Android 打造」提示；补 `usesCleartextTraffic`。
+2. 绘制从原生搬到 Android `YoloOverlayView`：支持中文标签与中文状态提示，去掉原生 5x7 点阵字。
+3. 文本编码下沉到端侧（词表 / 内置离线编码器），不再强制依赖 PC 服务；远端服务变为可选且失败自动降级。
+4. 修复首次启动在授予相机权限前就调用 `openCamera()` 的问题（改为授权回调里再打开）。
+5. 检测改为在**旋转后的正向缓冲**上执行，框坐标直接是屏幕坐标，Java 覆盖层无需再做旋转换算。

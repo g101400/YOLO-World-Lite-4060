@@ -717,11 +717,13 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
     YWMat rgb(roi_h, roi_w, 3);
     ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
 
-    on_image_render(rgb);
-
-    // rotate to native window orientation
+    // rotate to native window orientation first, then hand the *upright* buffer
+    // to the render hook: boxes produced there are already in screen space, so
+    // the Java overlay needs no rotation math (just /render_w, /render_h).
     YWMat rgb_render(render_h, render_w, 3);
     ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
+
+    on_image_render(rgb_render);
 
     ANativeWindow_setBuffersGeometry(win, render_w, render_h, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
 

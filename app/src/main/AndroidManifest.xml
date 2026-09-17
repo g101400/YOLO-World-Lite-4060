@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="ncnn.yoloworld.demo"
-      android:versionCode="1"
-      android:versionName="1.0.0">
+      android:versionCode="2"
+      android:versionName="1.1.0">
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- 仅在勾选「使用远端文本编码服务」时需要 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.camera2.full" />
 
-    <application android:label="@string/app_name">
+    <!-- usesCleartextTraffic: 远端文本编码服务通常跑在局域网 http 地址上，
+         targetSdk >= 28 默认禁止明文流量，这里显式放行 -->
+    <application android:label="@string/app_name"
+                 android:usesCleartextTraffic="true">
         <activity android:name="MainActivity"
                   android:label="@string/app_name"
                   android:icon="@mipmap/ic_launcher"

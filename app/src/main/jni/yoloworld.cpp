@@ -157,6 +157,7 @@ int Yoloworld::setPrompt(const std::vector<std::string>& names, const std::vecto
     text_emb = embeddings;
     embed_dim = E;
     has_prompt = true;
+    dim_mismatch = false;
     return 0;
 }
 
@@ -212,8 +213,17 @@ int Yoloworld::detect(const YWMat& rgb, std::vector<Object>& objects,
     int total_cls = out_cls.w * out_cls.h;
     if (total_cls % A != 0) return 0;
     int E = total_cls / A;
-    embed_dim = E;
+    model_embed_dim = E;
     cls_anchor_first = (out_cls.h == A);  // [A,E] => anchors along height
+
+    // The prompt embeddings must be exactly E wide: a mismatch would make every
+    // dot product read past/short of its row and silently score garbage.
+    if (embed_dim != E)
+    {
+        dim_mismatch = true;
+        return 0;
+    }
+    dim_mismatch = false;
 
     std::vector<Object> proposals;
     proposals.reserve(A);
@@ -293,44 +303,6 @@ int Yoloworld::detect(const YWMat& rgb, std::vector<Object>& objects,
     return 0;
 }
 
-int Yoloworld::draw(YWMat& rgb, const std::vector<Object>& objects) {
-    static const unsigned char colors[19][3] = {
-        {54,67,244},{99,30,233},{176,39,156},{183,58,103},{181,81,63},
-        {243,150,33},{244,169,3},{212,188,0},{136,150,0},{80,175,76},
-        {74,195,139},{57,220,205},{59,235,255},{7,193,255},{0,152,255},
-        {34,87,255},{72,85,121},{158,158,158},{139,125,96}
-    };
-
-    for (int i = 0; i < (int)objects.size(); i++) {
-        const Object& obj = objects[i];
-        const unsigned char* color = colors[i % 19];
-
-        int x0 = (int)obj.rect.x;
-        int y0 = (int)obj.rect.y;
-        int bw = (int)obj.rect.width;
-        int bh = (int)obj.rect.height;
-        yw_draw_rect(rgb, x0, y0, bw, bh, color[0], color[1], color[2], 2);
-
-        const char* name = (obj.label >= 0 && obj.label < (int)class_names.size())
-                               ? class_names[obj.label].c_str() : "?";
-        char text[256];
-        snprintf(text, sizeof(text), "%s %.1f%%", name, obj.prob * 100);
-
-        const int scale = 2;
-        int tw = 0, th = 0;
-        yw_text_size(text, scale, tw, th);
-        int plate_w = tw + 4 * scale;
-        int plate_h = th + 4 * scale;
-
-        int lx = x0;
-        int ly = y0 - plate_h;
-        if (ly < 0) ly = 0;
-        if (lx + plate_w > rgb.cols) lx = rgb.cols - plate_w;
-        if (lx < 0) lx = 0;
-
-        // dark text on bright plates, bright text on dark plates
-        unsigned char tc = (color[0] + color[1] + color[2] >= 381) ? 0 : 255;
-        yw_draw_label(rgb, text, lx, ly, scale, color[0], color[1], color[2], tc, tc, tc);
-    }
-    return 0;
-}
+// NOTE: drawing used to live here (rect + ASCII label). It moved to the Android
+// overlay view (YoloOverlayView) so labels/status text can use the system font
+// and therefore render Chinese prompts correctly. Native now only reports boxes.

@@ -13,7 +13,7 @@
             android:id="@+id/buttonSwitchCamera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="切换摄像头" />
+            android:text="@string/btn_switch_camera" />
 
         <Spinner
             android:id="@+id/spinnerCPUGPU"
@@ -32,15 +32,15 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:hint="类别(英文逗号分隔, 如 person, car, dog)"
-            android:text="person, car, bicycle, dog"
+            android:hint="@string/hint_prompt"
+            android:text="@string/default_prompt"
             android:inputType="text" />
 
         <Button
             android:id="@+id/buttonApplyPrompt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="应用提示词" />
+            android:text="@string/btn_apply_prompt" />
     </LinearLayout>
 
     <LinearLayout
@@ -48,13 +48,20 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content">
 
+        <CheckBox
+            android:id="@+id/checkUseServer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/check_use_server" />
+
         <EditText
             android:id="@+id/editServer"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:hint="文本编码器地址"
-            android:text="http://10.0.2.2:8000"
+            android:hint="@string/hint_server"
+            android:text="@string/default_server"
             android:inputType="textUri" />
     </LinearLayout>
 
@@ -62,13 +69,25 @@
         android:id="@+id/textStatus"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="初始化中…"
+        android:text="@string/status_init"
         android:textSize="12sp"
         android:padding="4dp" />
 
-    <SurfaceView
-        android:id="@+id/cameraview"
+    <FrameLayout
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent" />
+        android:layout_height="fill_parent">
+
+        <SurfaceView
+            android:id="@+id/cameraview"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" />
+
+        <ncnn.yoloworld.demo.YoloOverlayView
+            android:id="@+id/overlay"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:clickable="false"
+            android:focusable="false" />
+    </FrameLayout>
 
 </LinearLayout>

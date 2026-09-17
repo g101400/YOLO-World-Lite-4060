@@ -49,10 +49,13 @@ public:
     int detect(const YWMat& rgb, std::vector<Object>& objects,
                float prob_threshold = YW_PROB_THRESHOLD, float nms_threshold = YW_NMS_THRESHOLD);
 
-    int draw(YWMat& rgb, const std::vector<Object>& objects);
-
     bool loaded() const { return ok; }
     bool hasPrompt() const { return has_prompt; }
+
+    // Embedding dim the model actually outputs (discovered on the first detect).
+    int modelEmbedDim() const { return model_embed_dim; }
+    // True when the supplied prompt embeddings do not match the model's dim.
+    bool dimMismatch() const { return dim_mismatch; }
 
 private:
     ncnn::Net net;
@@ -61,9 +64,11 @@ private:
     bool ok;
     bool has_prompt;
 
-    int embed_dim;    // E
-    int num_anchors;  // A
-    int num_classes;  // number of prompt classes
+    int embed_dim;        // dim of the embeddings supplied via setPrompt()
+    int model_embed_dim;  // dim the model outputs (0 until the first detect)
+    int num_anchors;      // A
+    int num_classes;      // number of prompt classes
+    bool dim_mismatch;
 
     // prompt state
     std::vector<std::string> class_names;
