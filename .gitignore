@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+build.log
+keystore.properties
+release-key.jks
+# user-supplied model weights (large, not committed)
+app/src/main/assets/*.param
+app/src/main/assets/*.bin

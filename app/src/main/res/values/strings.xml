@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="app_name">yoloworld.lite</string>
+<string-array name="cpugpu_array">
+    <item>CPU</item>
+    <item>GPU</item>
+</string-array>
+
+<string name="prompt_empty">请输入类别名称</string>
+<string name="status_model_fail">模型加载失败：请将 yoloworld.param/.bin 放入 assets</string>
+<string name="status_wait_prompt">模型已加载，等待提示词…</string>
+<string name="status_fetching">正在向文本编码器请求嵌入…</string>
+<string name="status_embed_fail">嵌入获取失败，请确认文本编码器服务已启动</string>
+<string name="status_set_fail">提示词设置失败</string>
+<string name="status_applied">提示词已应用：%d 类</string>
+<string name="status_error">错误：</string>
+<string name="toast_req_fail">文本编码器请求失败</string>
+<string name="toast_applied">提示词已应用：%d 类</string>
+</resources>

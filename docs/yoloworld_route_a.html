@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOLO-World 开放词汇检测 · 路线 A</title>
+<style>
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;max-width:860px;margin:0 auto;padding:20px;line-height:1.7;color:#222;background:#fafafa}
+  h1{font-size:24px;border-bottom:3px solid #4c8bf5;padding-bottom:8px}
+  h2{font-size:19px;margin-top:28px;color:#1a4fa0}
+  code{background:#eef2f7;padding:2px 6px;border-radius:4px;font-size:13px}
+  pre{background:#1e1e2e;color:#eee;padding:14px;border-radius:8px;overflow:auto;font-size:13px}
+  .card{background:#fff;border:1px solid #e3e8ef;border-radius:10px;padding:14px 18px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .tag{display:inline-block;background:#4c8bf5;color:#fff;font-size:12px;padding:2px 8px;border-radius:10px;margin-right:6px}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
+  th,td{border:1px solid #dde3ec;padding:8px 10px;text-align:left}
+  th{background:#f0f5ff}
+  .ok{color:#1a9e54;font-weight:600}
+</style>
+</head>
+<body>
+<h1>YOLO-World · 开放词汇检测（路线 A）</h1>
+
+<div class="card">
+  <p><span class="tag">目标</span>把固定 80 类（COCO）的 YOLO-Lite 检测器，升级为<b>用任意文本提示词就能检测</b>的开放词汇检测器，无需重新训练。</p>
+  <p><span class="tag">思路</span>用 <b>YOLO-World</b> 的 YOLOv8 同族架构替换分类头：检测框由网络回归，类别由 <b>视觉嵌入 · 文本嵌入</b> 的相似度决定。文本嵌入来自 CLIP 文本塔（本 Demo 用 <code>yoloworld_text_tower.py</code> 提供）。</p>
+</div>
+
+<h2>1. 为什么选 YOLO-World（路线 A）</h2>
+<p>对比三条扩展路线：</p>
+<table>
+<tr><th>路线</th><th>做法</th><th>优点</th><th>缺点</th></tr>
+<tr><td><b>A 开放词汇</b></td><td>YOLO-World + CLIP 文本塔</td><td class="ok">任意类别、免重训、复用 YOLOv8 解码器</td><td>需 CLIP 文本塔服务</td></tr>
+<tr><td>B 微调</td><td>自有数据微调 80 类</td><td>精度高、可离线</td><td>仍为固定类别</td></tr>
+<tr><td>C 实例分割</td><td>YOLOv8-seg 扩展 C++ 解码</td><td>得到掩码</td><td>需改解码+掩码绘制</td></tr>
+</table>
+<p>路线 A 与本家族（v8/v11/v26）的 ncnn 输出<b>同构</b>，解码器可直接复用，是“扩大识别目标”性价比最高的方案。</p>
+
+<h2>2. 端到端流程</h2>
+<pre>摄像头帧 ──► [ncnn 检测骨干] ──► 每锚点: 框回归(bx) + 视觉嵌入(fx)
+                                          │
+文本提示词 ──► [CLIP 文本塔] ──► 文本嵌入(tx)
+                                          │
+              得分 = sigmoid( (fx · tx) / τ )    τ≈0.07
+                                          │
+                                   argmax → 类别 + 框</pre>
+<p>检测骨干与框回归完全在手机端（ncnn）完成；只有“文本→嵌入”这一步需要 CLIP 文本塔——它<b>只在提示词变化时计算一次</b>，开销极低，可用本机 Python 服务（或云端）提供。</p>
+
+<h2>3. 本 Demo 已落地的内容</h2>
+<ul>
+  <li><b>native 解码器</b>：<code>app/src/main/jni/yoloworld.cpp</code>，自动识别输出布局，温度系数 <code>τ=0.07</code> 可调。</li>
+  <li><b>提示词 UI</b>：输入框填英文逗号分隔的类别（如 <code>person, car, dog</code>），点“应用提示词”即把文本嵌入送进 native。</li>
+  <li><b>文本塔服务</b>：<code>yoloworld_text_tower.py</code>，真实 CLIP（<code>--clip</code>）或确定性 mock（默认，用于打通链路）。</li>
+  <li><b>算法自测</b>：<code>tools/test_decode.py</code> 用合成张量验证打分/NMS/去 letterbox，无需模型权重。</li>
+  <li><b>模型转换</b>：<code>convert_yoloworld_ncnn.py</code>，把官方 YOLO-World 权重转成此 Demo 约定的 ncnn 模型。</li>
+</ul>
+
+<h2>4. 拿到模型后即可运行</h2>
+<pre># 1) 启动文本塔 (PC 端)
+python yoloworld_text_tower.py --mock      # 演示
+python yoloworld_text_tower.py --clip       # 真实 CLIP
+
+# 2) 把模型放进 assets 并构建
+cp yoloworld.param yoloworld.bin app/src/main/assets/
+./gradlew assembleRelease && 用 apksigner 签名
+
+# 3) App 内填“文本编码器地址”为 http://&lt;PC局域网IP&gt;:8000
+#    (模拟器用 http://10.0.2.2:8000)，输入提示词，点应用。</pre>
+
+<h2>5. 调参提示</h2>
+<table>
+<tr><th>参数（yoloworld.cpp 顶部常量）</th><th>含义</th><th>说明</th></tr>
+<tr><td><code>YW_TEMPERATURE</code></td><td>温度 τ</td><td>YOLO-World 默认 0.07；与文本塔对齐不好时调大</td></tr>
+<tr><td><code>YW_PROB_THRESHOLD</code></td><td>置信度阈值</td><td>开放词汇建议 ≥0.3，背景多可上调</td></tr>
+<tr><td><code>YW_BOX_FORMAT</code></td><td>框格式</td><td>0=(x1,y1,x2,y2) 1=(cx,cy,w,h)，按导出格式选</td></tr>
+<tr><td><code>YW_BLOB_*</code></td><td>输入/输出 blob 名</td><td>与你的 ncnn 导出一致即可</td></tr>
+</table>
+
+<p style="color:#888;font-size:12px;margin-top:30px">YOLO-World-Lite · 路线 A 开放词汇检测 · 与 v5/v8/v11/v26 同源工程</p>
+</body>
+</html>

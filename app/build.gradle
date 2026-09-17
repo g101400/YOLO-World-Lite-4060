@@ -1,0 +1,53 @@
+apply plugin: 'com.android.application'
+
+def keystorePropsFile = rootProject.file('keystore.properties')
+def canSign = keystorePropsFile.exists()
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "29.0.2"
+
+    defaultConfig {
+        applicationId "com.ncnn.yoloworld.demo"
+        archivesBaseName = "$applicationId"
+
+        minSdkVersion 24
+    }
+
+    signingConfigs {
+        release {
+            if (canSign) {
+                def props = new Properties()
+                keystorePropsFile.withInputStream { props.load(it) }
+                storeFile rootProject.file(props['storeFile'])
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (canSign) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version "3.10.2"
+            path file('src/main/jni/CMakeLists.txt')
+        }
+    }
+
+    compileOptions {
+        encoding = 'UTF-8'
+    }
+
+    dependencies {
+        implementation 'com.android.support:support-v4:24.2.1'
+    }
+}
