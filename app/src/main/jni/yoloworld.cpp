@@ -74,16 +74,6 @@ static inline void get_box4(const ncnn::Mat& box, int a, float* out4) {
 }
 
 // Read the E-dim visual embedding for anchor `a` from a [A,E] or [E,A] ncnn Mat.
-static inline void get_feat(const ncnn::Mat& cls, int a, int E, float* outE) {
-    if (cls.h == E) {
-        // anchors along width: (embed_dim, anchor) -> element (dim=k, anchor=a)
-        for (int k = 0; k < E; k++) outE[k] = cls.row(k)[a];
-    } else {
-        // anchors along height: (anchor, embed_dim) -> row(a) length E
-        const float* p = cls.row(a);
-        for (int k = 0; k < E; k++) outE[k] = p[k];
-    }
-}
 
 static inline float dot(const float* a, const float* b, int n) {
     float s = 0.f;
@@ -146,16 +136,36 @@ int Yoloworld::setPrompt(const std::vector<std::string>& names, const std::vecto
         has_prompt = false;
         return -1;
     }
-    num_classes = (int)names.size();
-    // infer embed_dim from total length
-    int E = (int)(embeddings.size() / num_classes);
-    if (E <= 0 || (int)embeddings.size() != num_classes * E) {
+    if ((int)names.size() > YW_MAX_CLASSES) {
+        has_prompt = false;
+        return -2;  // 超过模型支持的类别数(txt 输入固定 YW_MAX_CLASSES 行)
+    }
+    int E = (int)(embeddings.size() / names.size());
+    if (E <= 0 || (int)embeddings.size() != (int)names.size() * E) {
         has_prompt = false;
         return -1;
     }
-    class_names = names;
-    text_emb = embeddings;
+    if (E != YW_EMBED_DIM) {
+        has_prompt = false;
+        dim_mismatch = true;
+        return -3;  // 与模型 txt 输入维度不符
+    }
+    num_classes = (int)names.size();
     embed_dim = E;
+    model_embed_dim = YW_EMBED_DIM;
+    class_names = names;
+    // L2 归一化每条真实提示词, 再循环填充到 K 行(填充行的分数不会被读取)
+    text_emb.assign(YW_MAX_CLASSES * E, 0.f);
+    for (int k = 0; k < YW_MAX_CLASSES; k++) {
+        int c = k % num_classes;
+        const float* src = &embeddings[c * E];
+        double n2 = 0.0;
+        for (int i = 0; i < E; i++) n2 += (double)src[i] * src[i];
+        float n = (float)sqrt(n2);
+        float* dst = &text_emb[k * E];
+        if (n > 1e-12f)
+            for (int i = 0; i < E; i++) dst[i] = src[i] / n;
+    }
     has_prompt = true;
     dim_mismatch = false;
     return 0;
@@ -195,66 +205,56 @@ int Yoloworld::detect(const YWMat& rgb, std::vector<Object>& objects,
     ncnn::Extractor ex = net.create_extractor();
     ex.input(YW_BLOB_INPUT, in_pad);
 
-    ncnn::Mat out_box, out_cls;
-    ex.extract(YW_BLOB_BOX, out_box);
-    ex.extract(YW_BLOB_CLS, out_cls);
+    // 文本嵌入输入 [K,E]: 行 k = 第 k 个(填充后)提示词
+    ncnn::Mat txt_mat(YW_EMBED_DIM, YW_MAX_CLASSES);
+    for (int k = 0; k < YW_MAX_CLASSES; k++) {
+        memcpy(txt_mat.row(k), &text_emb[k * YW_EMBED_DIM], YW_EMBED_DIM * sizeof(float));
+    }
+    ex.input(YW_BLOB_TXT, txt_mat);
 
-    if (out_box.c != 1 || out_cls.c != 1) return 0;
+    ncnn::Mat out_box, out_score;
+    ex.extract(YW_BLOB_BOX, out_box);
+    ex.extract(YW_BLOB_SCORES, out_score);
+
+    if (out_box.c != 1 || out_score.c != 1) return 0;
 
     // auto-detect anchor count from box tensor (total elems = 4 * A)
     int total_box = out_box.w * out_box.h;
     int A = total_box / 4;
     if (A <= 0 || total_box != A * 4) return 0;
-
-    // anchor dimension in box tensor
     box_anchor_first = (out_box.h == A);  // [A,4] => anchors along height
 
-    // detect embed_dim / anchor layout in cls tensor (total = E * A)
-    int total_cls = out_cls.w * out_cls.h;
-    if (total_cls % A != 0) return 0;
-    int E = total_cls / A;
-    model_embed_dim = E;
-    cls_anchor_first = (out_cls.h == A);  // [A,E] => anchors along height
-
-    // The prompt embeddings must be exactly E wide: a mismatch would make every
-    // dot product read past/short of its row and silently score garbage.
-    if (embed_dim != E)
-    {
-        dim_mismatch = true;
-        return 0;
-    }
-    dim_mismatch = false;
+    // scores: [K,A] 或 [A,K], 总元素数 = K * A
+    int total_score = out_score.w * out_score.h;
+    if (total_score != YW_MAX_CLASSES * A) return 0;
+    cls_anchor_first = (out_score.h == YW_MAX_CLASSES);
 
     std::vector<Object> proposals;
     proposals.reserve(A);
-
-    std::vector<float> feat(E);
     std::vector<float> box4(4);
 
     for (int a = 0; a < A; a++) {
         get_box4(out_box, a, box4.data());
-        get_feat(out_cls, a, E, feat.data());
 
         float x0, y0, x1, y1;
         if (YW_BOX_FORMAT == 0) {
             x0 = box4[0]; y0 = box4[1]; x1 = box4[2]; y1 = box4[3];
         } else {
-            // cx, cy, w, h
             x0 = box4[0] - box4[2] * 0.5f;
             y0 = box4[1] - box4[3] * 0.5f;
             x1 = box4[0] + box4[2] * 0.5f;
             y1 = box4[1] + box4[3] * 0.5f;
         }
 
-        // best prompt class for this anchor
+        // 打分已由网络内 BNContrastiveHead + sigmoid 完成, 端侧只取 argmax
         int best_c = 0;
-        float best_logit = -1e30f;
-        for (int c = 0; c < num_classes; c++) {
-            const float* te = &text_emb[c * E];
-            float s = dot(feat.data(), te, E) / YW_TEMPERATURE;
-            if (s > best_logit) { best_logit = s; best_c = c; }
+        float prob = 0.f;
+        for (int k = 0; k < num_classes; k++) {
+            float sc = cls_anchor_first ? out_score.row(k)[a]   // [K,A]
+                                        : out_score.row(a)[k];  // [A,K]
+            if (sc > prob) { prob = sc; best_c = k; }
         }
-        float prob = sigmoid(best_logit) * YW_CONF_SCALE;
+        prob *= YW_CONF_SCALE;
         if (prob < prob_threshold) continue;
 
         Object obj;

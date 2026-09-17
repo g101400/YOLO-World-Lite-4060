@@ -43,4 +43,5 @@
 <string name="ov_no_model">未加载模型：请将 yoloworld.param / yoloworld.bin 放入 assets 目录后重新编译</string>
 <string name="ov_no_prompt">未设置提示词：请输入类别，然后点击【应用提示词】</string>
 <string name="ov_dim_mismatch">嵌入维度不匹配（模型需要 %1$d 维），正在自动重算…</string>
+    <string name="prompt_too_many">最多支持 10 个类别（模型文本输入固定 10 行）</string>
 </resources>

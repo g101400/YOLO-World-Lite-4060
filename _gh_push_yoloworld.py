@@ -90,14 +90,14 @@ def main():
     # 2) 收集文件
     files = []
     for dp, dn, fns in os.walk(ROOT):
-        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx", "_ref", "_sweep_tmp")]
+        dn[:] = [d for d in dn if d not in (".git", "build", ".gradle", ".idea", "captures", ".externalNativeBuild", ".cxx", "_ref", "_sweep_tmp", "_real")]
         for fn in fns:
             full = os.path.join(dp, fn)
             rel = os.path.relpath(full, ROOT)
             if is_ignored(rel):
                 continue
-            if os.path.getsize(full) > 25 * 1024 * 1024:
-                continue  # 跳过过大文件
+            if os.path.getsize(full) > 40 * 1024 * 1024:
+                continue  # 跳过过大文件(正式模型 25.6MB 需要放行)
             files.append((rel, full))
     # 保证根目录文件在前
     files.sort()

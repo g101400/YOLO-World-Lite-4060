@@ -25,11 +25,16 @@ struct Object
 // ---- Model-specific knobs (edit to match your ncnn export) ----
 // These mirror the values documented in convert_yoloworld_ncnn.py / README.md.
 static const int   YW_TARGET_SIZE = 640;     // network input (letterbox target)
-static const float YW_TEMPERATURE = 0.07f;   // YOLO-World tau; divide dot-product by this
+// 官方权重架构: 骨干 C2fAttn 以文本为 guide → 文本嵌入必须作为网络输入
+// 模型输入: images[1,3,640,640] + txt[1,10,512]; 输出: output0=boxes[1,4,8400], output1=scores[1,10,8400](已 sigmoid)
+// 见 tools/export_real_weights.py
+static const int   YW_MAX_CLASSES = 10;      // txt 输入固定 10 行, 不足由 setPrompt 循环填充
+static const int   YW_EMBED_DIM   = 512;     // CLIP ViT-B/32 文本嵌入维度
 static const int   YW_BOX_FORMAT  = 0;       // 0 = (x1,y1,x2,y2) ; 1 = (cx,cy,w,h)
 static const char* YW_BLOB_INPUT  = "images";   // network input blob name
+static const char* YW_BLOB_TXT    = "txt";      // text embeddings input blob name
 static const char* YW_BLOB_BOX    = "output0";  // decoded boxes  blob name
-static const char* YW_BLOB_CLS    = "output1";  // text-aligned embeddings blob name
+static const char* YW_BLOB_SCORES = "output1";  // per-class scores blob name (sigmoid 已在图内)
 static const float YW_PROB_THRESHOLD = 0.30f;
 static const float YW_NMS_THRESHOLD   = 0.45f;
 static const float YW_CONF_SCALE      = 1.0f;   // multiply final prob if your export already folds a scale

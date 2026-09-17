@@ -28,6 +28,30 @@
 #include <vector>
 #include <cstdio>
 
+#include <cstdarg>
+#include <cstdlib>
+
+// --- libc++ ABI 兼容桩 -------------------------------------------------------
+// ncnn 20260526 预编译库由新版 NDK 构建，其 libc++ 内部断言函数
+// std::__ndk1::__libcpp_verbose_abort 在 NDK 21.3 的 libc++ 里不存在。
+// 这里按精确修饰名提供定义：仅在 ncnn 内部触发 libc++ 断言(如 vector 越界)时
+// 才会被调用 —— 记日志后 abort()。
+namespace std {
+namespace __ndk1 {
+void ncnn_yoloworld_verbose_abort_stub(char const* fmt, ...)
+    __asm__("_ZNSt6__ndk122__libcpp_verbose_abortEPKcz");
+void ncnn_yoloworld_verbose_abort_stub(char const* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    char buf[512];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    __android_log_print(ANDROID_LOG_FATAL, "libc++-stub", "%s", buf);
+    abort();
+}
+}
+}  // namespace std::__ndk1
+
 #include <platform.h>
 #include <benchmark.h>
 
@@ -227,15 +251,10 @@ JNIEXPORT jboolean JNICALL Java_ncnn_yoloworld_demo_NcnnYoloworld_loadModel(JNIE
     AAssetManager* mgr = AAssetManager_fromJava(env, assetManager);
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "loadModel %p", mgr);
 
-    bool use_gpu = ((int)cpugpu == 1);
+    bool use_gpu = false;  // CPU-only ncnn build; GPU path needs the vulkan package
+    (void)cpugpu;
 
     ncnn::MutexLockGuard g(lock);
-    if (use_gpu && ncnn::get_gpu_count() == 0)
-    {
-        delete g_yoloworld;
-        g_yoloworld = 0;
-        return JNI_FALSE;
-    }
     if (!g_yoloworld) g_yoloworld = new Yoloworld;
     int ret = g_yoloworld->load(mgr, use_gpu);
     return ret == 0 ? JNI_TRUE : JNI_FALSE;

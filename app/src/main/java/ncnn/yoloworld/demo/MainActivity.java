@@ -150,6 +150,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,
             Toast.makeText(this, R.string.prompt_empty, Toast.LENGTH_SHORT).show();
             return;
         }
+        if (names.size() > 10) {
+            Toast.makeText(this, R.string.prompt_too_many, Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         lastDimTried = dim;
         final String serverUrl = editServer.getText().toString().trim();

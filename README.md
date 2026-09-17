@@ -30,6 +30,8 @@ android_demo/ncnn-android-yoloworld/
 ├── convert_yoloworld_ncnn.py        # 官方权重 → 本Demo约定ncnn
 ├── tools/test_decode.py             # 解码算法离线自测
 ├── tools/make_smoke_model.py        # 生成/自检 smoke-test ncnn 模型(可脱机跑通链路)
+├── tools/export_real_weights.py     # 官方 yolov8s-worldv2.pt → ncnn (pnnx, 文本作为第二输入)
+├── tools/finish_export.py           # pnnx 产物 blob 重命名 → assets + ncnn 运行时验证
 ├── tools/build_prompt_table.py      # 生成端侧嵌入词表 assets/prompt_emb.bin
 ├── docs/ncnn_model_format.md        # ncnn param/bin 格式速查(手写模型/排错)
 ├── docs/yoloworld_route_a.html      # 路线A 知识文档

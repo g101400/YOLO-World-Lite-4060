@@ -24,10 +24,6 @@ _ref/
 tools/_sweep_tmp/
 keystore.properties
 release-key.jks
-# 真实 YOLO-World 权重（很大，需自行导出，勿提交）
-# 注意：smoke-test 模型也用这两个文件名，但只有 ~5MB，会被提交
-# 若要换成真实权重，直接覆盖本目录同名文件即可（真实权重 >25MB 不会被推送脚本上传）
-app/src/main/assets/*.param
-app/src/main/assets/*.bin
-!app/src/main/assets/yoloworld.param
-!app/src/main/assets/yoloworld.bin
+# 官方权重下载/导出工作目录(~500MB)，勿提交
+_real/
+# 正式模型 (yolov8s-worldv2 → ncnn, ~25.6MB) 保留在仓库: app/src/main/assets/

@@ -13,8 +13,18 @@ android {
         applicationId "com.ncnn.yoloworld.demo"
         archivesBaseName = "$applicationId"
 
+        versionCode 3
+        versionName "1.2.0"
         minSdkVersion 24
         targetSdkVersion 29
+
+        externalNativeBuild {
+            cmake {
+                // ncnn 20260526 头文件需要 C++17
+                cppFlags "-std=c++17 -frtti -fexceptions"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     signingConfigs {
