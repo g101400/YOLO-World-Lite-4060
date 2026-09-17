@@ -25,6 +25,8 @@ android_demo/ncnn-android-yoloworld/
 ├── yoloworld_text_tower.py          # CLIP 文本塔服务 (真实/ mock)
 ├── convert_yoloworld_ncnn.py        # 官方权重 → 本Demo约定ncnn
 ├── tools/test_decode.py             # 解码算法离线自测
+├── tools/make_smoke_model.py        # 生成/自检 smoke-test ncnn 模型(可脱机跑通链路)
+├── docs/ncnn_model_format.md        # ncnn param/bin 格式速查(手写模型/排错)
 ├── docs/yoloworld_route_a.html      # 路线A 知识文档
 └── README.md
 ```
